@@ -1,0 +1,39 @@
+<launch>
+  <!-- Multi-LiDAR: merge N PointCloud2 topics into one cloud in base_link, then run
+       FAR-LIO on the merged topic.
+
+       All sensors must be extrinsically calibrated (static TF base_link -> sensor)
+       and ideally time synchronised (PTP/PPS). If they are not, set a larger
+       max_stamp_delta and expect de-skewing to be approximate.
+
+       Example:
+         roslaunch farlio_odometry farlio_multi_lidar.launch \
+           input_topics:="/hesai/pandar,/livox/lidar" \
+           config_file:=$(rospack find farlio_odometry)/config/merged_multi_lidar.yaml
+  -->
+  <arg name="input_topics" default="/lidar_a,/lidar_b"/>
+  <arg name="output_frame" default="base_link"/>
+  <arg name="output_topic" default="/merged_points"/>
+  <arg name="max_stamp_delta" default="0.02"/>
+  <arg name="config_file" default="$(find farlio_odometry)/config/merged_multi_lidar.yaml"/>
+  <arg name="pipeline_type" default="gicp_cv"/>
+  <arg name="rviz" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_multi_lidar" name="farlio_multi_lidar" output="screen">
+    <param name="input_topics" value="$(arg input_topics)"/>
+    <param name="output_frame" value="$(arg output_frame)"/>
+    <param name="output_topic" value="$(arg output_topic)"/>
+    <param name="max_stamp_delta" value="$(arg max_stamp_delta)"/>
+  </node>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_node" name="farlio_odometry" output="screen">
+    <param name="config_file" value="$(arg config_file)"/>
+    <param name="pipeline_type" value="$(arg pipeline_type)"/>
+  </node>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find farlio_odometry)/rviz/farlio.rviz"/>
+</launch>

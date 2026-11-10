@@ -1,0 +1,45 @@
+<launch>
+  <!-- Full FAR-LIO stack (LiDAR odometry + 100 Hz EKF state estimation),
+       equivalent to upstream `docker compose with the far-lio profile`.
+
+       Upstream default: tam_cuda_gicp_ext + tam_state_estimation_node_ekf_3d_nh.
+       This port:        farlio_odometry_node (gicp_ext) +
+                         farlio_odometry_state_estimation_3d_nh.
+
+       Example:
+         roslaunch farlio_odometry farlio_full.launch \
+           bag:=/home/komasa/lio_ws/data/far-lio/kitti_seq04_ros1.bag \
+           odom_config:=$(rospack find farlio_odometry)/config/kitti_seq04_full.yaml \
+           ekf_config:=$(rospack find farlio_odometry)/config/state_estimation_kitti.yaml
+  -->
+  <arg name="estimation_variant" default="3d_nh"/> <!-- 2d_kin|2d_nh|3d_kin|3d_nh|3d_stm -->
+  <arg name="odom_config" default="$(find farlio_odometry)/config/kitti_seq04_full.yaml"/>
+  <arg name="ekf_config" default="$(find farlio_odometry)/config/state_estimation_kitti.yaml"/>
+  <arg name="pipeline_type" default="gicp_ext"/>
+  <arg name="bag" default=""/>
+  <arg name="rate" default="1.0"/>
+  <arg name="bag_delay" default="5.0"/>
+  <arg name="rviz" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <!-- 100 Hz state estimation (publishes /core/state/odometry and TF) -->
+  <node pkg="farlio_odometry" type="farlio_odometry_state_estimation_$(arg estimation_variant)"
+        name="StateEstimation" output="screen" required="true">
+    <param name="config_file" value="$(arg ekf_config)"/>
+  </node>
+
+  <!-- LiDAR odometry (gicp_ext: initial guess from the EKF via /tf) -->
+  <node pkg="farlio_odometry" type="farlio_odometry_node" name="LidarOdometry" output="screen">
+    <param name="config_file" value="$(arg odom_config)"/>
+    <param name="pipeline_type" value="$(arg pipeline_type)"/>
+    <param name="publish_debug_clouds" value="false"/>
+  </node>
+
+  <node if="$(eval arg('bag') != '')" pkg="rosbag" type="play" name="player" output="screen"
+        args="--clock -d $(arg bag_delay) -r $(arg rate) $(arg bag)"/>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find farlio_odometry)/rviz/farlio.rviz"/>
+</launch>

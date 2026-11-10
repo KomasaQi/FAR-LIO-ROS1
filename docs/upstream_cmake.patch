@@ -1,0 +1,58 @@
+diff --git a/lib_cpp/odometry_cpp/CMakeLists.txt b/lib_cpp/odometry_cpp/CMakeLists.txt
+index 13cc0c2..8aff07d 100644
+--- a/lib_cpp/odometry_cpp/CMakeLists.txt
++++ b/lib_cpp/odometry_cpp/CMakeLists.txt
+@@ -34,30 +34,43 @@ option(BUILD_TESTING "Build unit tests" ON)
+ # Dependencies
+ # ==============================================================================
+ # C++ standard
+-find_package(Eigen3 3.4 REQUIRED)
++# ROS1-PORT: the adapter provides a vendored Eigen 3.4 target (required by
++# Eigen::Vector<T,N>); only search the system when it is not pre-defined.
++if(NOT TARGET Eigen3::Eigen)
++  find_package(Eigen3 3.4 REQUIRED)
++endif()
+ 
+ # TAM Common packages
+-find_package(param_management_cpp REQUIRED)
+-find_package(tsl_logger_cpp REQUIRED)
++# ROS1-PORT: the ROS 1 adapter pre-defines these targets (catkin does not export
++# imported targets). Only look them up when they are not already available.
++if(NOT TARGET param_management_cpp::param_management_cpp)
++  find_package(param_management_cpp REQUIRED)
++endif()
++if(NOT TARGET tsl_logger_cpp::tsl_logger_cpp)
++  find_package(tsl_logger_cpp REQUIRED)
++endif()
+ 
+ # Fetch additional libraries
+ include(FetchContent)
+ # Load tsl robin map (header only library)
+ FetchContent_Declare(robin_map URL https://github.com/Tessil/robin-map/archive/refs/tags/v1.4.0.tar.gz)
+ # Google Test Library (for unit tests)
+-FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
++# ROS1-PORT: only fetch gtest when tests are enabled.
++if(BUILD_TESTING)
++  FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
++endif()
+ # Fetch Sophus
+ set(BUILD_SOPHUS_TESTS OFF CACHE BOOL "Don't build Sophus tests")
+ FetchContent_Declare(Sophus URL https://github.com/strasdat/Sophus/archive/refs/tags/1.24.6.tar.gz)
+ # TBB multithreading library
+-set(TBBMALLOC_BUILD OFF CACHE BOOL "Don't build TBB malloc")
+-set(TBB_EXAMPLES OFF CACHE BOOL "Don't build TBB examples")
+-set(TBB_STRICT OFF CACHE BOOL "Don't treat TBB warnings as errors")
+-set(TBB_TEST OFF CACHE BOOL "Don't build TBB tests")
+-FetchContent_Declare(tbb URL https://github.com/uxlfoundation/oneTBB/archive/refs/tags/v2022.0.0.tar.gz)
++# ROS1-PORT: use the system oneTBB (libtbb-dev on Noetic) instead of downloading it.
++find_package(TBB REQUIRED)
+ 
+ # Make all libraries available
+-FetchContent_MakeAvailable(robin_map googletest Sophus tbb)
++FetchContent_MakeAvailable(robin_map Sophus)
++if(BUILD_TESTING)
++  FetchContent_MakeAvailable(googletest)
++endif()
+ 
+ # Fetch rerun if configured
+ if(VISUALIZATION)

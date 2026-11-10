@@ -1,0 +1,27 @@
+<launch>
+  <!-- Run FAR-LIO (ROS 1 port) on a live sensor or a bag.
+       Example:
+         roslaunch farlio_odometry farlio.launch config_file:=$(rospack find farlio_odometry)/config/kitti_seq04.yaml \
+                  bag:=/home/komasa/lio_ws/data/far-lio/kitti_seq04_ros1.bag
+  -->
+  <arg name="config_file" default="$(find farlio_odometry)/config/kitti_seq04.yaml"/>
+  <arg name="pipeline_type" default="gicp_cv"/>  <!-- gicp_cv | icp_cv | gicp_ext | icp_ext -->
+  <arg name="bag" default=""/>
+  <arg name="rate" default="1.0"/>
+  <arg name="rviz" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_node" name="farlio_odometry" output="screen">
+    <param name="config_file" value="$(arg config_file)"/>
+    <param name="pipeline_type" value="$(arg pipeline_type)"/>
+    <param name="publish_debug_clouds" value="true"/>
+  </node>
+
+  <node if="$(eval arg('bag') != '')" pkg="rosbag" type="play" name="player" output="screen"
+        args="--clock -r $(arg rate) $(arg bag)"/>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find farlio_odometry)/rviz/farlio.rviz"/>
+</launch>

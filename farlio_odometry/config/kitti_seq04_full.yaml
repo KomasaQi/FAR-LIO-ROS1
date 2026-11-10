@@ -1,0 +1,94 @@
+# =============================================================================
+# FAR-LIO (ROS 1 port) - LiDAR odometry node configuration
+#
+# All keys below except `node.*`, `localization.*` and `output.*` are declared by
+# the upstream FAR-LIO pipeline (lib_cpp/odometry_cpp). See
+# ../../FAR-LIO/docs/configuration.md for the upstream reference.
+# =============================================================================
+
+# --- Node interface -----------------------------------------------------------
+node:
+  odom_frame: "local_cartesian"      # fixed world/odometry frame
+  child_frame: "base_link"           # vehicle frame the odometry is expressed in
+  cloud_frame: "velo_link"           # frame_id of the incoming PointCloud2
+  input_pointcloud: "/kitti/velo/pointcloud"
+  output_odom: "/core/state/lidar_odometry"
+  input_map: ""                      # .pcd prior map (localization mode only)
+  wait_tf: false                     # true = take initial pose from TF odom->child
+  max_cloud_range: 0.0               # [m] optional node-side range crop, 0 = off
+
+# --- Localization mode (used when pipeline.update_map: false) -----------------
+localization:
+  # [x, y, z, roll, pitch, yaw] in odom_frame
+  initial_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+# --- Output -------------------------------------------------------------------
+output:
+  map_path: "/tmp/farlio_map.pcd"    # target of the ~save_map service
+
+# --- Pipeline -----------------------------------------------------------------
+pipeline:
+  update_map: true                   # true = odometry/mapping, false = localization
+  undistort: true
+  preprocess: true
+  downsample: false
+  buffer_z: false
+  debug_mode: false                  # full stack: keep the CPU free for EKF + GICP
+  num_threads: 8
+
+covariance:
+  min_cov_translation: [0.01, 0.01, 0.02]
+  min_cov_orientation: [0.02, 0.02, 0.0001]
+  min_cov_linear_twist: [0.1, 0.1, 0.1]
+  min_cov_angular_twist: [0.01, 0.01, 0.01]
+
+diagnostic:
+  check_input_status: false
+  frame_outdated: 100.0
+  check_forward: false
+  min_motion_threshold: 0.5
+  check_ellipsis: true
+  ellipsis_size_s: 5.0
+  ellipsis_size_d: 2.5
+  check_time_diff: true
+  max_time_diff: 50.0
+  enable_vel: true
+  check_vel: true
+  vel_motion_threshold: 0.0
+
+distortion:
+  max_time_diff: 30.0
+  vel_threshold: 3.0
+
+map:
+  frame_map: false
+  voxel_size: 4.0                    # [m] upstream KITTI/race default
+  max_distance: 1000.0               # [m]
+  cov_regularization: "FROBENIUS"    # SVD | MIN_EIGENVALUE | FROBENIUS
+
+model:
+  initial_pos_x: 0.0
+  initial_pos_y: 0.0
+  initial_pos_z: 0.0
+  initial_rot_x: 0.0
+  initial_rot_y: 0.0
+  initial_rot_z: 0.0
+  initial_rot_w: 1.0
+
+preprocessing:
+  crop_range: [0.0]                  # [min, max] m, size==2 enables
+  crop_footprint: [0.0]              # [longitudinal, lateral] m, size==2 enables
+
+registration:
+  solver_type: "GaussNewton"         # GaussNewton | LevenbergMarquardt
+  max_iter: 500
+  max_inner_iter: 10
+  max_time: 200.0                    # [ms]
+  convergence_criterion: 5.0e-3
+  damping_factor: 1.0e-9
+  damping_scale: 2.0
+
+threshold:
+  initial_threshold: 1.0
+  min_motion_threshold: 0.25
+  max_correspondence_range: 100.0

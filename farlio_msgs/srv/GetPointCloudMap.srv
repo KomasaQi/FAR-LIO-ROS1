@@ -1,0 +1,5 @@
+std_msgs/Header header
+float32 voxel_size
+---
+bool success
+sensor_msgs/PointCloud2 map
