@@ -29,6 +29,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -542,12 +543,20 @@ class OdometryNode {
     if constexpr (TConfig::MODEL == types::ModelType::EXTERNALGUESS) {
       types::PoseStamped guess;
       const bool valid = lookup_initial_guess(msg->header.stamp, guess);
-      if (!valid) {
-        const auto odom = pipeline_->get_odometry();
-        guess.pose = odom.pose.pose;
-        guess.stamp = stamp2ns(msg->header.stamp);
+      if (valid) {
+        pipeline_->set_pose_model(guess, true);
+      } else {
+        // No external (EKF) pose yet. Keep the configured initial pose for the
+        // very first frame; afterwards use the last registered pose as the CV
+        // prediction seed. Calling set_pose_model with an all-zero "odometry"
+        // would otherwise throw the configured prior away.
+        const auto last = pipeline_->get_odometry();
+        if (last.stamp != 0) {
+          guess.pose = last.pose.pose;
+          guess.stamp = stamp2ns(msg->header.stamp);
+          pipeline_->set_pose_model(guess, false);
+        }
       }
-      pipeline_->set_pose_model(guess, valid);
     }
 
     set_undistortion_poses(stamp2ns(msg->header.stamp));

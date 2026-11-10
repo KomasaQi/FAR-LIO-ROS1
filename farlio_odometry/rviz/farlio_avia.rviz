@@ -1,0 +1,100 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 10
+      Plane Cell Count: 50
+      Color: 160; 160; 164
+      Alpha: 0.3
+    - Class: rviz/PointCloud2
+      Name: Prior map
+      Enabled: true
+      Topic: /prior_map
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: true
+    - Class: rviz/PointCloud2
+      Name: Live scan
+      Enabled: true
+      Topic: /livox/lidar_points
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: true
+    - Class: rviz/TF
+      Name: TF
+      Enabled: true
+      Marker Scale: 1.5
+      Show Names: true
+    - Class: rviz/Path
+      Name: FAR-LIO trajectory
+      Enabled: true
+      Topic: /core/state/lidar_odometry_path
+      Color: 255; 60; 60
+      Line Style: Lines
+      Line Width: 0.05
+      Alpha: 1
+    - Class: rviz/PointCloud2
+      Name: Local map
+      Enabled: true
+      Topic: /map
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: true
+    - Class: rviz/Odometry
+      Name: EKF odometry
+      Enabled: true
+      Topic: /core/state/odometry
+      Position Tolerance: 0.2
+      Angle Tolerance: 0.2
+      Keep: 100
+      Shape: Axes
+      Axes Length: 1.2
+      Axes Radius: 0.12
+      Color: 0; 255; 120
+    - Class: rviz/PointCloud2
+      Name: Registered frame
+      Enabled: false
+      Topic: /frame_registration
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: FlatColor
+      Color: 0; 170; 255
+  Global Options:
+    Fixed Frame: camera_init
+    Frame Rate: 30
+    Background Color: 48; 48; 48
+  Tools:
+    - Class: rviz/MoveCamera
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 80
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.7
+      Yaw: 0.8
+    Saved: ~
+Window Geometry:
+  Height: 900
+  Width: 1600

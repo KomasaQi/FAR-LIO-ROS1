@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   pcl_conversions
   farlio_msgs
+  livox_ros_driver
 )
 
 find_package(PCL REQUIRED COMPONENTS common io)
@@ -54,6 +55,7 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}_core
   CATKIN_DEPENDS roscpp sensor_msgs nav_msgs geometry_msgs diagnostic_msgs std_srvs
                  tf2 tf2_ros tf2_geometry_msgs pcl_ros pcl_conversions farlio_msgs
+                 livox_ros_driver
   DEPENDS PCL TBB
 )
 
@@ -97,6 +99,8 @@ add_executable(${PROJECT_NAME}_node
   src/gicp_cv_instantiation.cpp
 )
 add_executable(${PROJECT_NAME}_multi_lidar src/multi_lidar_merger.cpp)
+add_executable(${PROJECT_NAME}_livox_to_pointcloud src/livox_to_pointcloud.cpp)
+add_executable(${PROJECT_NAME}_imu_stamp_adapter src/imu_stamp_adapter.cpp)
 add_executable(${PROJECT_NAME}_map_server src/map_server.cpp)
 target_include_directories(${PROJECT_NAME}_multi_lidar PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/boost-shim
@@ -106,6 +110,20 @@ target_include_directories(${PROJECT_NAME}_multi_lidar PRIVATE
 )
 target_link_libraries(${PROJECT_NAME}_multi_lidar PRIVATE ${catkin_LIBRARIES})
 add_dependencies(${PROJECT_NAME}_multi_lidar ${catkin_EXPORTED_TARGETS})
+
+target_include_directories(${PROJECT_NAME}_livox_to_pointcloud PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/boost-shim
+  ${catkin_INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}_livox_to_pointcloud PRIVATE ${catkin_LIBRARIES})
+add_dependencies(${PROJECT_NAME}_livox_to_pointcloud ${catkin_EXPORTED_TARGETS})
+
+target_include_directories(${PROJECT_NAME}_imu_stamp_adapter PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/boost-shim
+  ${catkin_INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}_imu_stamp_adapter PRIVATE ${catkin_LIBRARIES})
+add_dependencies(${PROJECT_NAME}_imu_stamp_adapter ${catkin_EXPORTED_TARGETS})
 
 target_include_directories(${PROJECT_NAME}_map_server PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/boost-shim
@@ -161,7 +179,7 @@ endforeach()
 install(TARGETS ${FARLIO_ESTIMATION_TARGETS}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}_multi_lidar ${PROJECT_NAME}_map_server
+install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}_multi_lidar ${PROJECT_NAME}_map_server ${PROJECT_NAME}_livox_to_pointcloud ${PROJECT_NAME}_imu_stamp_adapter
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

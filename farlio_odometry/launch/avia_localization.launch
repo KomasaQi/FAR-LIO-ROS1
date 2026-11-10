@@ -1,0 +1,65 @@
+<launch>
+  <!-- FAR-LIO full-stack localization on the AVIA / CICV bag, using the map
+       built by FAST-LIVO2 (avia_mapping_fastlivo.launch) and cropped/downsampled
+       by scripts/prepare_prior_map.py.
+
+       Pipeline: livox CustomMsg -> PointCloud2 converter -> FAR-LIO GICP
+       (gicp_ext, initial guess from EKF TF) + 100 Hz EKF.
+  -->
+  <arg name="rviz" default="true"/>
+  <arg name="bag" default="/media/komasa/Data/Ubuntu文件备份/rosbags/avia_hk_cicv/cicv_avia.bag"/>
+  <arg name="rate" default="1.0"/>
+  <arg name="bag_delay" default="3.0"/>
+  <arg name="duration" default="100000"/> <!-- max seconds to play (default: whole bag) -->
+  <arg name="pipeline_type" default="gicp_ext"/>
+  <arg name="estimation_variant" default="3d_nh"/>
+  <arg name="odom_config" default="$(find farlio_odometry)/config/avia_cicv_localization.yaml"/>
+  <arg name="ekf_config" default="$(find farlio_odometry)/config/state_estimation_avia.yaml"/>
+  <arg name="map_pcd" default="/home/komasa/lio_ws/data/maps/avia_cicv_local_map.pcd"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <!-- AVIA and the vehicle frame coincide in this setup. -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_livox"
+        args="0 0 0 0 0 0 base_link livox_frame"/>
+
+  <node pkg="pcl_ros" type="pcd_to_pointcloud" name="prior_map_publisher"
+        args="$(arg map_pcd) 0.2" output="screen">
+    <param name="frame_id" value="camera_init"/>
+    <remap from="cloud_pcd" to="/prior_map"/>
+  </node>
+
+  <!-- livox_ros_driver/CustomMsg -> sensor_msgs/PointCloud2 (offset_time kept) -->
+  <node pkg="farlio_odometry" type="farlio_odometry_livox_to_pointcloud"
+        name="livox_to_pointcloud" output="screen">
+    <param name="input_topic" value="/livox/lidar"/>
+    <param name="output_topic" value="/livox/lidar_points"/>
+    <!-- The AVIA/CICV bag has 2020 stamps while the bag clock is "now". -->
+    <param name="auto_stamp_offset" value="true"/>
+  </node>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_imu_stamp_adapter"
+        name="imu_stamp_adapter" output="screen">
+    <param name="input_topic" value="/livox/imu"/>
+    <param name="output_topic" value="/livox/imu_fixed"/>
+    <param name="auto_stamp_offset" value="true"/>
+  </node>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_state_estimation_$(arg estimation_variant)"
+        name="StateEstimation" output="screen" required="true">
+    <param name="config_file" value="$(arg ekf_config)"/>
+  </node>
+
+  <node pkg="farlio_odometry" type="farlio_odometry_node" name="LidarOdometry" output="screen">
+    <param name="config_file" value="$(arg odom_config)"/>
+    <param name="pipeline_type" value="$(arg pipeline_type)"/>
+    <param name="publish_debug_clouds" value="false"/>
+  </node>
+
+  <node if="$(eval arg('bag') != '')" pkg="rosbag" type="play" name="player" output="screen"
+        args="--clock -d $(arg bag_delay) -r $(arg rate) -u $(arg duration) $(arg bag)"/>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find farlio_odometry)/rviz/farlio_avia.rviz"/>
+</launch>

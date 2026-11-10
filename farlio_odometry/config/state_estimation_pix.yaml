@@ -1,0 +1,138 @@
+# FAR-LIO EKF configuration for the PIX vehicle localization run.
+# Map frame "map" (HitchOpen CICV map), IMU topic /imu_message.
+# State estimation (FAR-LIO EKF) configuration for the official KITTI 04 test bag.
+# Values are taken 1:1 from upstream config/far-lio.yml (StateEstimation block).
+use_sim_time: true
+node:
+  odom_frame_id: map
+  child_frame_id: base_link
+enable:
+  measurement_covariance_adaptation: true
+  mahalanobis_outlier_rejection: true
+  initialize_from_measurements: true
+  track_angle_measurement: false
+  reference_angle_measurement: true
+state_machine:
+  min_valid_imus: 1
+  overwrite_pose_covariance_threshold: 0.05
+hard_outlier_rejection:
+  treshold:
+    linear_velocity_mps: 10.0
+    angular_velocity_radps: 1.0
+    accelerometer_mps2: 1000.0
+  max_consecutive_outlier:
+    linear_velocity: 250
+    imu: 50
+reference_angles:
+  v_dot_filter_coefficients:
+  - 0.0044
+  - 0.0212
+  - 0.0617
+  - 0.1186
+  - 0.1732
+  - 0.1965
+  - 0.1732
+  - 0.1186
+  - 0.0617
+  - 0.0212
+  - 0.0044
+  orientation:
+    R_init:
+    - 0.05
+    - 0.1
+    - 1000000000.0
+    outlier_bounds:
+    - 0.3
+    - 0.3
+    - 0.3
+measurements:
+  lidar_gicp:
+    message:
+      topic: /core/state/lidar_odometry
+      type: nav_msgs/msg/Odometry
+      timeout_ms: 500
+      additional_delay_ms: 0
+    status:
+      topic: /core/state/lidar_odometry_status
+      timeout_ms: 500
+    position_m:
+      R_init:
+      - 0.05
+      - 0.05
+      - 0.07
+      outlier_bounds:
+      - 5.0
+      - 1.0
+      - 4.0
+    orientation_rad:
+      R_init:
+      - 0.3
+      - 0.3
+      - 0.0002
+      outlier_bounds:
+      - 0.3
+      - 0.3
+      - 0.3
+    linear_velocity_mps:
+      R_init:
+      - 0.6
+      - 1.0
+      - 0.5
+      outlier_bounds:
+      - 2.0
+      - 1.0
+      - 2.0
+inputs:
+  bias_init:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  average_delay_ms: 10
+  imus:
+    primary:
+      message:
+        topic: /imu_message
+        type: sensor_msgs/msg/Imu
+        timeout_ms: 500
+      filter_coefficients:
+      - 0.07722183762197628
+      - 0.24522338986219644
+      - 0.34256086202951863
+      - 0.24522338986219644
+      - 0.07722183762197628
+kalman_filter:
+  Q:
+  - 0.00035
+  - 0.0003
+  - 0.003
+  - 1.0
+  - 2.4
+  - 4.0
+  covariance_adaption:
+    limit: 0.6
+    decay: 0.0015
+    virtual_scale: 10.0
+vehicle_model:
+  linear_velocity_mps:
+    R_init:
+    - 0.1
+    - 1.2
+    - 0.1
+    outlier_bounds:
+    - 2.0
+    - 1.0
+    - 2.0
+  parameter:
+    tyreradius_front_m: 0.3085
+    tyreradius_rear_m: 0.3088
+    rr_vel_scale_vel_points_mps:
+    - 0.0
+    - 100.0
+    rr_vel_scale_scale_factors:
+    - 1.0
+    - 1.0
+    l_WheelbaseF_m: 1.733
+    l_WheelbaseR_m: 1.382

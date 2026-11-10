@@ -1,0 +1,26 @@
+<launch>
+  <!-- Build a prior map for FAR-LIO with FAST-LIVO2 on the AVIA/CICV bag.
+
+       This is the upstream launch `fast_livo/mapping_avia_hk_cicv.launch`
+       (same node, same params) with PCD saving enabled so that FAR-LIO can load
+       the resulting map in localization mode. The map is written on shutdown to:
+         $(find fast_livo)/Log/PCD/all_raw_points.pcd
+         $(find fast_livo)/Log/PCD/all_downsampled_points.pcd
+  -->
+  <arg name="rviz" default="false"/>
+  <arg name="bag" default="/media/komasa/Data/Ubuntu文件备份/rosbags/avia_hk_cicv/cicv_avia.bag"/>
+  <arg name="rate" default="1.0"/>
+  <arg name="bag_delay" default="2.0"/>
+
+  <rosparam command="load" file="$(find farlio_odometry)/config/fastlivo_avia_hk_cicv_save.yaml"/>
+
+  <node pkg="fast_livo" type="fastlivo_mapping" name="laserMapping" output="screen">
+    <rosparam file="$(find fast_livo)/config/hk_camera_pinhole.yaml"/>
+  </node>
+
+  <node if="$(eval arg('bag') != '')" pkg="rosbag" type="play" name="player" output="screen"
+        args="--clock -d $(arg bag_delay) -r $(arg rate) $(arg bag)"/>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find fast_livo)/rviz_cfg/fast_livo2.rviz"/>
+</launch>

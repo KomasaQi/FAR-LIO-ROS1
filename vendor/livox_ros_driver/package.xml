@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>livox_ros_driver</name>
+  <version>0.0.1</version>
+  <description>
+    Message-only subset of livox_ros_driver (CustomMsg / CustomPoint) used by the
+    FAR-LIO ROS 1 adapter to consume Livox bags. No hardware driver is included.
+  </description>
+  <maintainer email="komasa@example.com">komasa</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <export/>
+</package>

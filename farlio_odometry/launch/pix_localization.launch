@@ -1,0 +1,50 @@
+<launch>
+  <!-- FAR-LIO full-stack localization on the HitchOpen PIX vehicle data.
+       Prior map: data/maps/pix_cicv_local_map.pcd (HitchOpen CICV GlobalMap,
+       cropped + 0.5 m voxel, frame "map"). Initial pose: first pose of
+       transformations.pcd from the same mapping run.
+  -->
+  <arg name="rviz" default="true"/>
+  <arg name="bag" default="/home/komasa/HitchOpen-THICV-Stack/src/launch/simple_racing/maps/Cicv_Map_Outside/pix_moving.bag"/>
+  <arg name="rate" default="1.0"/>
+  <arg name="bag_delay" default="3.0"/>
+  <arg name="duration" default="100000"/> <!-- max seconds to play (default: whole bag) -->
+  <arg name="pipeline_type" default="gicp_ext"/>
+  <arg name="estimation_variant" default="3d_nh"/>
+  <arg name="odom_config" default="$(find farlio_odometry)/config/pix_cicv_localization.yaml"/>
+  <arg name="ekf_config" default="$(find farlio_odometry)/config/state_estimation_pix.yaml"/>
+  <arg name="map_pcd" default="/home/komasa/lio_ws/data/maps/pix_cicv_local_map.pcd"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <!-- Vehicle frame -> LiDAR frame (extrinsics are identity for this bag). -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_velodyne"
+        args="0 0 0 0 0 0 base_link velodyne"/>
+
+  <!-- Prior map for RViz (latched point cloud). -->
+  <node pkg="pcl_ros" type="pcd_to_pointcloud" name="prior_map_publisher"
+        args="$(arg map_pcd) 0.2" output="screen">
+    <param name="frame_id" value="map"/>
+    <remap from="cloud_pcd" to="/prior_map"/>
+  </node>
+
+  <!-- 100 Hz EKF -->
+  <node pkg="farlio_odometry" type="farlio_odometry_state_estimation_$(arg estimation_variant)"
+        name="StateEstimation" output="screen" required="true">
+    <param name="config_file" value="$(arg ekf_config)"/>
+  </node>
+
+  <!-- LiDAR odometry in localization mode (initial guess from the EKF TF) -->
+  <node pkg="farlio_odometry" type="farlio_odometry_node" name="LidarOdometry" output="screen">
+    <param name="config_file" value="$(arg odom_config)"/>
+    <param name="pipeline_type" value="$(arg pipeline_type)"/>
+    <param name="publish_debug_clouds" value="false"/>
+  </node>
+
+  <node if="$(eval arg('bag') != '')" pkg="rosbag" type="play" name="player" output="screen"
+        args="--clock -d $(arg bag_delay) -r $(arg rate) -u $(arg duration) $(arg bag)"/>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find farlio_odometry)/rviz/farlio_pix.rviz"/>
+</launch>

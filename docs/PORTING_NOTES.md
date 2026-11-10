@@ -135,7 +135,44 @@ EKF 节点的传感器配置（`measurements.*` / `inputs.imus.*`）在 YAML 中
 | TSL 发布 | 10 Hz |
 | 双雷达合并（245k 点） | 约 140 ms / 帧（10 Hz 需降采样或 CUDA） |
 
-## 9. 升级上游
+## 9. 真实数据适配（AVIA/Livox、PIX/Velodyne）
+
+### 9.1 Livox CustomMsg 与时间戳
+
+- 新增 `livox_to_pointcloud`：`livox_ros_driver/CustomMsg` → `PointCloud2`，保留 `offset_time`
+  （uint32 ns）供 FAR-LIO 去畸变；`auto_stamp_offset` 可把旧消息时间戳对齐到当前 ROS 时间。
+- 新增 `imu_stamp_adapter`：IMU 时间戳同偏移重发（AVIA/CICV bag 的消息时间是 2020 年，
+  而 bag clock 是 2026 年；不对齐会导致 EKF 延迟补偿全部判过期、永不初始化）。
+- 新增 message-only 包 `vendor/livox_ros_driver`（仅 CustomMsg/CustomPoint，不含硬件驱动），
+  md5 与官方驱动一致，可直接订阅 livox bag。
+
+### 9.2 初始位姿与先验地图
+
+- `prepare_prior_map.py`：按轨迹包围盒裁剪 + 体素降采样 + 可选 z 范围，输出 FAR-LIO 可加载的
+  `x y z intensity` 二进制 PCD。35 M 点的 HitchOpen 全局图 → 2.1 M 点（0.5 m），加载约 3 s。
+- 初始位姿必须取 **bag 起始时刻** 在参考轨迹中的位姿：
+  - PIX：`pix_moving.bag` 是 mapping 的后半段，`transformations.pcd` 从 1.5 h 前开始；
+    正确初值 = 对 `transformations` 按 bag 起始时间插值（-274.571, -207.086, 0.724,
+    roll -0.00852, pitch 0.04002, yaw 2.07583）。
+  - AVIA：同一 bag 建图，地图原点即首帧，初值取单位位姿。
+
+### 9.3 初始猜测回退的修正
+
+`ExternalGuess` 模式下若 EKF TF 尚不可用，原实现用 `get_odometry()`（首帧恒为零）作为
+`set_pose_model(..., valid=false)` 的输入，会把配置的先验初值覆盖成原点，导致定位模式首帧
+直接跳到错误位置。移植改为：
+
+- TF 可用 → 正常设初值；
+- TF 不可用且已有上一帧配准结果 → 用上一帧位姿 + CV 预测；
+- TF 不可用且尚无结果 → 保留配置的初始位姿。
+
+### 9.4 双 overlay 环境
+
+`scripts/env.sh` 同时 source `farlio_ws` 与 `lio_ws`，并显式恢复 `CMAKE_PREFIX_PATH`、
+`ROS_PACKAGE_PATH`、`LD_LIBRARY_PATH`；否则 catkin overlay 会互相覆盖，导致
+`fast_livo` 或 `farlio_odometry` 的可执行文件找不到。
+
+## 10. 升级上游
 
 ```bash
 cd src/FAR-LIO && git pull

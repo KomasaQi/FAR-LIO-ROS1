@@ -25,6 +25,7 @@
   <depend>pcl_conversions</depend>
   <depend>yaml-cpp</depend>
   <depend>farlio_msgs</depend>
+  <depend>livox_ros_driver</depend>
   <depend>message_runtime</depend>
   <depend>boost</depend>
   <depend>eigen</depend>

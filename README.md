@@ -22,6 +22,8 @@
 | 定位模式（加载先验 PCD 文件） | 10 Hz | 391.0 m | 0.468 m | 1.019 m | 3.10 % |
 | 定位模式（经 `GetPointCloudMap` 地图服务） | 10 Hz | 391.0 m | 0.462 m | 0.997 m | 3.22 % |
 | 双雷达合并（合成测试，245k 点/帧） | 10 Hz | 103.6 m | 0.088 m | 0.129 m | 2.17 % |
+| **PIX/CICV 定位（gicp_ext）** | 10 Hz | 60 s 实车段 | **0.035 m**（对地图轨迹，同帧） | 最大 0.17 m | — |
+| **PIX/CICV 满血（GICP+EKF）** | 100 Hz | 60 s 实车段 | **0.133 m**（对地图轨迹） | 最大 0.27 m | — |
 
 - 单帧 GICP（124k 点，8 线程 CPU）19–45 ms，10 Hz 实时；EKF 100 Hz 每周期 <1 ms。
 - 5 个 EKF 变体（2D/3D × Kinematic/NonHolonomic/SingleTrack）全部编译并实测可初始化。
@@ -147,7 +149,24 @@ roslaunch farlio_odometry farlio_full.launch \
 | `/core/orchestration/StateEstimation_status` | `diagnostic_msgs/DiagnosticArray` | EKF 节点诊断 |
 | `/StateEstimation/tsl_values`、`/LidarOdometry/tsl_values` | `farlio_msgs/TSLValues` | TSL 调试时序（定义 latched） |
 
-### 4.3 单独跑里程计 / 定位 / 多雷达
+### 4.3 真实数据定位（AVIA/Livox 与 PIX/Velodyne，一键 + RViz）
+
+```bash
+# 环境（必须，保证 farlio_ws 与 lio_ws 两个 overlay 同时可见）
+source ~/lio_ws/src/farlio_ros1/farlio_odometry/scripts/env.sh
+
+# AVIA/CICV：先用 FAST-LIVO2 建图并保存/裁剪先验图，再满血定位
+./scripts/run_avia_mapping.sh "/media/komasa/Data/Ubuntu文件备份/rosbags/avia_hk_cicv/cicv_avia.bag"
+./scripts/run_avia_localization.sh "/media/komasa/Data/Ubuntu文件备份/rosbags/avia_hk_cicv/cicv_avia.bag"
+
+# PIX/CICV：使用 HitchOpen 已建好的全局地图 + pix_moving.bag
+./scripts/run_pix_localization.sh   "$HOME/HitchOpen-THICV-Stack/src/launch/simple_racing/maps/Cicv_Map_Outside/pix_moving.bag"
+```
+
+细节（地图裁剪、初值来源、时间戳适配、实测误差）见
+[`docs/REAL_DATA_RUNS.md`](docs/REAL_DATA_RUNS.md)。
+
+### 4.4 单独跑里程计 / 定位 / 多雷达
 
 ```bash
 # 纯激光里程计（gicp_cv）
@@ -168,7 +187,7 @@ roslaunch farlio_odometry farlio_multi_lidar.launch \
   input_topics:="/hesai/pandar,/livox/lidar"
 ```
 
-### 4.4 评测
+### 4.5 评测
 
 ```bash
 python3 $(rospack find farlio_odometry)/scripts/evaluate_trajectory.py \
@@ -327,4 +346,10 @@ roslaunch farlio_odometry farlio.launch \
 
 # 多雷达
 roslaunch farlio_odometry farlio_multi_lidar.launch input_topics:="/hesai/pandar,/livox/lidar"
+
+# 真实数据（一键启动 + RViz）
+./scripts/run_avia_localization.sh [bag]      # AVIA/CICV，Livox CustomMsg + 时间戳适配
+./scripts/run_pix_localization.sh  [bag]      # PIX/CICV，Velodyne + HitchOpen 先验图
+./scripts/run_avia_mapping.sh      [bag]      # FAST-LIVO2 建图 + 裁剪先验图
+RVIZ=false ./scripts/run_pix_localization.sh [bag] duration:=30   # 无界面快速验证
 ```
